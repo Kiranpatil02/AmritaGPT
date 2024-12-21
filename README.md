@@ -14,4 +14,5 @@ AmritaGPT is a chatbot designed to answer all Amrita Viswa Vidyapeetham related 
 
 ## Acknowledgements
 This project is developed by [IETE Amrita SF](https://github.com/IETEAmritaChapter) under the initiative of IETE Amrita SF 2023-24 team, Amrita Vishwa Vidyapeetham, Coimbatore. 
+
 © 2024 IETE Amrita. All rights reserved.
