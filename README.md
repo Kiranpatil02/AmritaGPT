@@ -11,3 +11,7 @@ AmritaGPT is a chatbot designed to answer all Amrita Viswa Vidyapeetham related 
 - For speech-to-text conversion, Whisper is employed, which sends the input to the LLM. gTTS is then used to convert the generated text into speech. 🔊🗣️
 
 - The front-end is developed using React.js, while Flask is used for backend operations. The web UI and system integration are currently under development and will be completed shortly. 💻⚙️
+
+## Acknowledgements
+This project is developed by [IETE Amrita SF](https://github.com/IETEAmritaChapter) under the initiative of IETE Amrita SF 2023-24 team, Amrita Vishwa Vidyapeetham, Coimbatore. 
+© 2024 IETE Amrita. All rights reserved.
