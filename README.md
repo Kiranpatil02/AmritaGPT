@@ -22,12 +22,12 @@ This Section explains how to set up, run, and interact with the chatbot API.
 
 1. **Python**: Install Python 3.9 or higher.
 2. **Dependencies**: Ensure the required Python packages are installed.
-3. **Environment File**: Create a `.env` file and add your gemini key.
+3. **Environment File**: Create a `.env` file and add your gemini and huggingface key.
 4. **Text Data**: Ensure a text file named `general.txt` exists in the root directory containing the knowledge base.
 5. **Models**:
    - HuggingFace `sentence-transformers/all-MiniLM-L6-v2`
    - Google Generative AI Embeddings (`embedding-001`)
-   - Meta Llama `Llama-3.2-11B-Vision-Instruct`
+   - Meta Llama `Llama-3-8B-Instruct`
 
 ---
 
@@ -47,11 +47,8 @@ This Section explains how to set up, run, and interact with the chatbot API.
 3. Configure the `.env` file:
     ```env
     GOOGLE_API_KEY=<your_google_api_key>
+    HF_API_TOKEN = <your token>
     ```
-
-4. Download models:
-    - HuggingFace models will be downloaded automatically.
-    - Ensure Meta Llama models are placed in the `models` directory if u have them downloaded already.
 
 ---
 

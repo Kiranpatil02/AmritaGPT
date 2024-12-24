@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Dict, Any
+from huggingface_hub import InferenceClient
 
 load_dotenv()
 
@@ -40,30 +41,8 @@ vector_store_google = FAISS.from_texts(text_chunks, embedding=google_embeddings)
 vector_store_hf.save_local("faiss_index_hf")
 vector_store_google.save_local("faiss_index_google")
 
-# Configure HuggingFace model
-bnb_config = transformers.BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_quant_type='nf4',
-    bnb_4bit_use_double_quant=True,
-    bnb_4bit_compute_dtype=torch.bfloat16
-)
 
-model_id = "meta-llama/Llama-3.2-11B-Vision-Instruct"
-model_config = AutoConfig.from_pretrained(model_id)
-
-hf_model = AutoModelForCausalLM.from_pretrained(
-    model_id,
-    trust_remote_code=True,
-    config=model_config,
-    quantization_config=bnb_config,
-    cache_dir='models'
-)
-
-hf_model.eval()
-hf_tokenizer = AutoTokenizer.from_pretrained(model_id)
-hf_text_generator = pipeline("text-generation", model=hf_model, tokenizer=hf_tokenizer)
-
-from langchain.llms import HuggingFacePipeline
+client = InferenceClient(api_key=os.getenv("HF_API_TOKEN"))
 
 # Generate conversational chain for both methods
 def get_conversational_chain(use_google: bool):
@@ -90,8 +69,6 @@ def get_conversational_chain(use_google: bool):
 
     if use_google:
         model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
-    else:
-        model = HuggingFacePipeline(pipeline=hf_text_generator)
 
     chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
     return chain
@@ -108,6 +85,7 @@ def format_chat_history(history):
 
 # Answer question
 def answer_question(user_question, chat_history, use_google=False):
+    # Load the appropriate FAISS vector store
     vector_store = FAISS.load_local(
         "faiss_index_google" if use_google else "faiss_index_hf",
         google_embeddings if use_google else huggingface_embeddings,
@@ -120,21 +98,45 @@ def answer_question(user_question, chat_history, use_google=False):
         last_exchange = chat_history[-2:]  # Get last user question and bot response
         context_query = f"{' '.join([msg.get('user', msg.get('bot', '')) for msg in last_exchange])} {user_question}"
 
+    # Retrieve relevant documents
     docs = vector_store.similarity_search(context_query)
 
-    chain = get_conversational_chain(use_google=use_google)
-    formatted_history = format_chat_history(chat_history[-4:])  # Keep last 2 exchanges for context
+    # Extract the text content from the retrieved documents
+    context = "\n".join([doc.page_content for doc in docs])
 
-    response = chain(
-        {
-            "input_documents": docs,
-            "question": user_question,
-            "chat_history": formatted_history
-        },
-        return_only_outputs=True
-    )
+    # Format conversation history for context
+    formatted_history = format_chat_history(chat_history[-4:])  # Last 4 exchanges
 
-    return response["output_text"]
+    if use_google:
+        chain = get_conversational_chain(use_google=use_google)
+        response = chain(
+            {
+                "input_documents": docs,
+                "question": user_question,
+                "chat_history": formatted_history
+            },
+            return_only_outputs=True
+        )
+        return response["output_text"]
+    else:
+        print(formatted_history)
+        # Construct messages for the Hugging Face model
+        messages = [
+            {"role": "system", "content": "Use the following context to answer the user's question."},
+            {"role": "system", "content": context},
+            {"role": "user", "content": user_question},
+            {"role": "system", "content": formatted_history},
+        ]
+        completion = client.chat.completions.create(
+            model="meta-llama/Meta-Llama-3-8B-Instruct",
+            messages=messages,
+            max_tokens=500,
+        )
+
+        model_response = completion.choices[0].message["content"]
+
+        return model_response
+
 
 conversation_context: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
 
