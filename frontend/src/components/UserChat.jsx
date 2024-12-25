@@ -23,14 +23,11 @@ const UserChat = ({message,duration}) => {
           },
           body:JSON.stringify({query}),
         });
-        console.log("Working")
         const data=await res.json();
-        console.log("Finished")
-        console.log(data) 
-        setResponse(data.response, "The response"); 
+        setResponse(data.response); 
       } catch (error) {
         console.error('Error fetching response:', error);
-        setResponse('Error fetching response.');
+        setResponse('Failed to fetch response.');
       }
       finally{
         setloading(false);
