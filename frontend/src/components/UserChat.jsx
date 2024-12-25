@@ -5,7 +5,7 @@ import GPTChat from './GPTChat';
 
 const UserChat = ({message,duration}) => {
 
-  const url="https://6ff5-35-185-197-128.ngrok-free.app/"
+  const url="<Backend_url>"
 
 
   const [response, setResponse] = useState("");
