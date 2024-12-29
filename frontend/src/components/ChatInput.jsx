@@ -1,9 +1,69 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { FaMicrophone } from "react-icons/fa";
 import { IoSend } from "react-icons/io5";
 
 const ChatInput = () => {
   const [text, setText] = useState("");
+  const [isrecording, setisrecording] = useState(false);
+  const [audiorecord,setaudiorecord] = useState(null);
+  const audioarr = useRef([]);
+
+
+const MicrophoneFunc = async () =>{
+  console.log("clicked")
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const recorder = new MediaRecorder(stream);
+  audioarr.current = [];
+
+  recorder.ondataavailable = (event) => {
+    if(event.data.size > 0){
+      audioarr.current.push(event.data);
+    }
+  };
+
+  recorder.onstop = () => {
+    const audiofile = new Blob(audioarr.current, { type: "audio/webm" });
+    sendAudio(audiofile);
+    audioarr.current = [];
+  };
+
+  recorder.start();
+      setaudiorecord(recorder);
+      setisrecording(true);
+}
+
+const stopRecording = () => {
+  if(audiorecord){
+    audiorecord.stop();
+    setisrecording(false);
+  }
+};
+
+const sendAudio = async (audioBlob) => {
+  const formData = new FormData();
+  formData.append("audio", audioBlob, "recording.webm");
+
+  
+  const response = await fetch("/endpoint", { 
+      method: "POST",
+      body: formData,
+    });
+
+    if (response.ok) {
+      console.log("Audio sent successfully!");
+    } else {
+      console.error("Failed to send audio.");
+    }
+};
+
+const handleClick = () => {
+  if(isrecording) {
+    stopRecording();
+  } else {
+    MicrophoneFunc();
+  }
+};
+
 
   return (
     <div className="flex p-3 items-center">
@@ -25,7 +85,7 @@ const ChatInput = () => {
           {text.trim() ? (
               <IoSend size={25} className="text-black transition-transform hover:scale-110"/>
             ) : (
-              <FaMicrophone size={25} className="text-white transition-transform hover:scale-110"/>
+              <FaMicrophone size={25} className={`text-white transition-transform hover:scale-110 ${ isrecording ? "animate-pulse" : "" }`} onClick={handleClick}/>
           )}
         </div>
       </div>
