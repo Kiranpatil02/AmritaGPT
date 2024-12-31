@@ -13,12 +13,14 @@ import os
 from dotenv import load_dotenv
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI
+from fastapi import FastAPI, Request,File, UploadFile
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from huggingface_hub import InferenceClient
+import whisper
 
 load_dotenv()
+model_whisper = whisper.load_model("base")
 
 # Load and split the text file
 with open("general.txt", encoding="utf8") as f:
@@ -153,6 +155,7 @@ def index():
 
 @app.post("/get-response/")
 def get_response(request: QueryRequest):
+    print("HI")
     session_id = request.session_id if request.session_id else str(uuid.uuid4())
 
     user_input = request.input_text
@@ -170,6 +173,19 @@ def get_response(request: QueryRequest):
     conversation_context[session_id]["history"] = conversation_history
 
     return {"session_id": session_id, "response": response, "history": conversation_history}
+
+
+@app.post("/upload-audio")
+async def upload_audio(audio: UploadFile = File(...)):
+    path = "audio.webm"
+    with open(path, "wb") as f:
+        f.write(await audio.read())
+        
+    result = model_whisper.transcribe(path, fp16=False)
+    print(result["text"])
+    inp_text = result["text"]
+    print(inp_text)
+    # return {"transcription": inp_text}
 
 origins = ["*"]
 
