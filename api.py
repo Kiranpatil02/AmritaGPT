@@ -18,6 +18,8 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 from huggingface_hub import InferenceClient
 import whisper
+import requests
+from fastapi.testclient import TestClient
 
 load_dotenv()
 model_whisper = whisper.load_model("base")
@@ -86,7 +88,7 @@ def format_chat_history(history):
     return formatted_history
 
 # Answer question
-def answer_question(user_question, chat_history, use_google=False):
+async def answer_question(user_question, chat_history, use_google=False):
     # Load the appropriate FAISS vector store
     vector_store = FAISS.load_local(
         "faiss_index_google" if use_google else "faiss_index_hf",
@@ -148,13 +150,14 @@ class QueryRequest(BaseModel):
     use_google: bool = False
 
 app = FastAPI()
+client = TestClient(app)
 
 @app.get("/")
 def index():
     return {"message": "Hello! Use the /get-response endpoint to chat."}
 
 @app.post("/get-response/")
-def get_response(request: QueryRequest):
+async def get_response(request: QueryRequest):
     print("HI")
     session_id = request.session_id if request.session_id else str(uuid.uuid4())
 
@@ -166,8 +169,8 @@ def get_response(request: QueryRequest):
     conversation_history = conversation_context[session_id]["history"]
     conversation_history.append({"user": user_input})
 
-    response = answer_question(user_input, conversation_history, use_google=request.use_google)
-
+    response = await answer_question(user_input, conversation_history, use_google=request.use_google)
+    
     conversation_history.append({"bot": response})
 
     conversation_context[session_id]["history"] = conversation_history
@@ -186,6 +189,11 @@ async def upload_audio(audio: UploadFile = File(...)):
     inp_text = result["text"]
     print(inp_text)
     # return {"transcription": inp_text}
+    
+    data = {"input_text": inp_text, "use_google": True}
+    response = client.post("/get-response/", json=data)
+   
+    print(response.json().get('response'))
 
 origins = ["*"]
 
