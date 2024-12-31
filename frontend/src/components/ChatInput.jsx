@@ -40,13 +40,13 @@ const stopRecording = () => {
 };
 
 const sendAudio = async (audioBlob) => {
-  const formData = new FormData();
-  formData.append("audio", audioBlob, "recording.webm");
+  const Data = new FormData();
+  Data.append("audio", audioBlob, "audio.webm");
 
-  
-  const response = await fetch("/endpoint", { 
+  console.log(Data)
+  const response = await fetch("http://127.0.0.1:8000/upload-audio", { 
       method: "POST",
-      body: formData,
+      body: Data,
     });
 
     if (response.ok) {
@@ -85,7 +85,8 @@ const handleClick = () => {
           {text.trim() ? (
               <IoSend size={25} className="text-black transition-transform hover:scale-110"/>
             ) : (
-              <FaMicrophone size={25} className={`text-white transition-transform hover:scale-110 ${ isrecording ? "animate-pulse" : "" }`} onClick={handleClick}/>
+              
+              <FaMicrophone size={25} className={`text-white transition-transform hover:scale-110 ${ isrecording ? "animate-pulse animate-bounce" : "" }`} onClick={handleClick}/>
           )}
         </div>
       </div>
