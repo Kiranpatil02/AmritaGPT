@@ -50,9 +50,12 @@ const sendAudio = async (audioBlob) => {
     });
 
     if (response.ok) {
-      console.log("Audio sent successfully!");
+      console.log("Audio sent successfully");
+      const audioUrl = URL.createObjectURL(await response.blob());
+      const audio = new Audio(audioUrl);
+      audio.play();
     } else {
-      console.error("Failed to send audio.");
+      console.error("Not sent...");
     }
 };
 
