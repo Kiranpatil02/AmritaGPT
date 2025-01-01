@@ -20,6 +20,8 @@ from huggingface_hub import InferenceClient
 import whisper
 import requests
 from fastapi.testclient import TestClient
+from gtts import gTTS
+from fastapi.responses import FileResponse
 
 load_dotenv()
 model_whisper = whisper.load_model("base")
@@ -184,7 +186,7 @@ async def upload_audio(audio: UploadFile = File(...)):
     with open(path, "wb") as f:
         f.write(await audio.read())
         
-    result = model_whisper.transcribe(path, fp16=False)
+    result = model_whisper.transcribe(path, fp16=False, language="en")
     print(result["text"])
     inp_text = result["text"]
     print(inp_text)
@@ -192,8 +194,12 @@ async def upload_audio(audio: UploadFile = File(...)):
     
     data = {"input_text": inp_text, "use_google": True}
     response = client.post("/get-response/", json=data)
-   
-    print(response.json().get('response'))
+    inp_text = response.json().get('response')
+    print(inp_text)
+    obj = gTTS(text=inp_text, lang='en', slow=False)
+    obj.save("final.mp3")
+    os.remove(path)
+    return FileResponse('final.mp3', media_type="audio/mpeg", filename="final.mp3")
 
 origins = ["*"]
 
