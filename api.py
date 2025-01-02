@@ -21,7 +21,9 @@ import whisper
 import requests
 from fastapi.testclient import TestClient
 from gtts import gTTS
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse, JSONResponse
+import io
+import json
 
 load_dotenv()
 model_whisper = whisper.load_model("base")
@@ -188,18 +190,45 @@ async def upload_audio(audio: UploadFile = File(...)):
         
     result = model_whisper.transcribe(path, fp16=False, language="en")
     print(result["text"])
-    inp_text = result["text"]
-    print(inp_text)
-    # return {"transcription": inp_text}
-    
-    data = {"input_text": inp_text, "use_google": True}
-    response = client.post("/get-response/", json=data)
-    inp_text = response.json().get('response')
-    print(inp_text)
-    obj = gTTS(text=inp_text, lang='en', slow=False)
-    obj.save("final.mp3")
-    os.remove(path)
-    return FileResponse('final.mp3', media_type="audio/mpeg", filename="final.mp3")
+    if result["text"]:
+        transcription = result["text"]
+        
+        # return {"transcription": inp_text}
+        
+        data = {"input_text": transcription, "use_google": True}
+        response = client.post("/get-response/", json=data)
+        inp_text = response.json().get('response')
+        print(inp_text)
+        
+        obj = gTTS(text=inp_text, lang='en', slow=False)
+        audio_io = io.BytesIO()
+        obj.write_to_fp(audio_io)
+        audio_io.seek(0)
+        headers = {
+                'Transcription': transcription,
+                'Response-Text': inp_text,
+                'Content-Type': 'audio/mpeg'
+            }
+        os.remove(path)
+        return StreamingResponse(
+                audio_io,
+                headers=headers,
+                media_type="audio/mpeg"
+            )
+    else:
+        def queryagain():
+                with open("test.mp3", mode="rb") as file:
+                    yield from file
+        headers = {
+                'Transcription': " ",
+                'Response-Text': "Please enter your query again",
+                'Content-Type': 'audio/mpeg'
+            }
+        return StreamingResponse(
+                queryagain(),
+                headers=headers,
+                media_type="audio/mpeg"
+            )
 
 origins = ["*"]
 
@@ -209,6 +238,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Transcription", "Response-Text", "Content-Type"],
 )
 
 if __name__ == "__main__":
