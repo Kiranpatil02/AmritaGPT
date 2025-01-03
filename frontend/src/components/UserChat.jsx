@@ -5,7 +5,7 @@ import GPTChat from './GPTChat';
 
 const UserChat = ({message,duration}) => {
 
-  const url="<your_Backend_url>" // Should be in ENV, to be precise
+  const url="<your_backend_url>" // Should be in ENV, to be precise
   
 
   const [response, setResponse] = useState("");
@@ -46,7 +46,11 @@ const UserChat = ({message,duration}) => {
     <div>
       {
         loading?(<p className='bg-[#A4123F] text-white py-3 px-6 rounded-2xl max-w-[50%] w-fit my-2 mx-5'>Loading...</p>):
-        (    <GPTChat message={response}/>)
+        ( 
+          <div className='px-6 mb-4 '>
+          <GPTChat message={response}/>
+          </div>  
+          )
       }
 
     </div>

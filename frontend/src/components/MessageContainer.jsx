@@ -7,7 +7,6 @@ const MessageContainer = () => {
     <div className="px-6 mb-4">
       <GPTChat message={"Hey I am Amrita-gpt, Ask any queries related to Amrita Univeristy"} />
     </div>
-  );
-};
-
+);
+}
 export default MessageContainer;
