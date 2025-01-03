@@ -13,12 +13,20 @@ import os
 from dotenv import load_dotenv
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI
+from fastapi import FastAPI, Request,File, UploadFile
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from huggingface_hub import InferenceClient
+import whisper
+import requests
+from fastapi.testclient import TestClient
+from gtts import gTTS
+from fastapi.responses import StreamingResponse, JSONResponse
+import io
+import json
 
 load_dotenv()
+model_whisper = whisper.load_model("base")
 
 # Load and split the text file
 with open("general.txt", encoding="utf8") as f:
@@ -84,7 +92,7 @@ def format_chat_history(history):
     return formatted_history
 
 # Answer question
-def answer_question(user_question, chat_history, use_google=False):
+async def answer_question(user_question, chat_history, use_google=False):
     # Load the appropriate FAISS vector store
     vector_store = FAISS.load_local(
         "faiss_index_google" if use_google else "faiss_index_hf",
@@ -146,13 +154,15 @@ class QueryRequest(BaseModel):
     use_google: bool = False
 
 app = FastAPI()
+client = TestClient(app)
 
 @app.get("/")
 def index():
     return {"message": "Hello! Use the /get-response endpoint to chat."}
 
 @app.post("/get-response/")
-def get_response(request: QueryRequest):
+async def get_response(request: QueryRequest):
+    print("HI")
     session_id = request.session_id if request.session_id else str(uuid.uuid4())
 
     user_input = request.input_text
@@ -163,13 +173,62 @@ def get_response(request: QueryRequest):
     conversation_history = conversation_context[session_id]["history"]
     conversation_history.append({"user": user_input})
 
-    response = answer_question(user_input, conversation_history, use_google=request.use_google)
-
+    response = await answer_question(user_input, conversation_history, use_google=request.use_google)
+    
     conversation_history.append({"bot": response})
 
     conversation_context[session_id]["history"] = conversation_history
 
     return {"session_id": session_id, "response": response, "history": conversation_history}
+
+
+@app.post("/upload-audio")
+async def upload_audio(audio: UploadFile = File(...)):
+    path = "audio.webm"
+    with open(path, "wb") as f:
+        f.write(await audio.read())
+        
+    result = model_whisper.transcribe(path, fp16=False, language="en")
+    print(result["text"])
+    if result["text"]:
+        transcription = result["text"]
+        
+        # return {"transcription": inp_text}
+        
+        data = {"input_text": transcription, "use_google": True}
+        response = client.post("/get-response/", json=data)
+        inp_text = response.json().get('response')
+        print(inp_text)
+        clean_text = inp_text.replace('*', '').replace('#', '').replace('`', '')
+        obj = gTTS(text=clean_text, lang='en', slow=False)
+        audio_io = io.BytesIO()
+        obj.write_to_fp(audio_io)
+        audio_io.seek(0)
+        headers = {
+                'Transcription': transcription,
+                'Response-Text': inp_text,
+                'Content-Type': 'audio/mpeg'
+            }
+        os.remove(path)
+        return StreamingResponse(
+                audio_io,
+                headers=headers,
+                media_type="audio/mpeg"
+            )
+    else:
+        def queryagain():
+                with open("test.mp3", mode="rb") as file:
+                    yield from file
+        headers = {
+                'Transcription': " ",
+                'Response-Text': "Please enter your query again",
+                'Content-Type': 'audio/mpeg'
+            }
+        return StreamingResponse(
+                queryagain(),
+                headers=headers,
+                media_type="audio/mpeg"
+            )
 
 origins = ["*"]
 
@@ -179,6 +238,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Transcription", "Response-Text", "Content-Type"],
 )
 
 if __name__ == "__main__":
