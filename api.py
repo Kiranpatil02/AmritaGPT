@@ -199,8 +199,8 @@ async def upload_audio(audio: UploadFile = File(...)):
         response = client.post("/get-response/", json=data)
         inp_text = response.json().get('response')
         print(inp_text)
-        
-        obj = gTTS(text=inp_text, lang='en', slow=False)
+        clean_text = inp_text.replace('*', '').replace('#', '').replace('`', '')
+        obj = gTTS(text=clean_text, lang='en', slow=False)
         audio_io = io.BytesIO()
         obj.write_to_fp(audio_io)
         audio_io.seek(0)
