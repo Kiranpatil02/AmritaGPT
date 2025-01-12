@@ -7,7 +7,7 @@ AmritaGPT is a chatbot designed to answer all Amrita Viswa Vidyapeetham related 
 
 ### Demo
 <video controls>
-<source  src="./assets/final_1.mp4" type="video/mp4">
+<source  src="./assets/demo_video.mp4" type="video/mp4">
 </video>
 
 ## Implementation
