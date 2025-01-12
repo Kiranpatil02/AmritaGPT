@@ -1,13 +1,9 @@
 import React, { useState, useRef } from "react";
 import { FaMicrophone } from "react-icons/fa";
 import { IoSend } from "react-icons/io5";
-import UserChat from "./UserChat";
 
-
-const ChatInput = ({addMessage}) => {
+const ChatInput = ({addMessage,isLoading}) => {
     const [query,setquery]=useState("");
-    const [question,setquestion]=useState([]);
-    const [delay,setdelay]=useState(false);
     const [isrecording, setisrecording] = useState(false);
     const [audiorecord,setaudiorecord] = useState(null);
     const audioarr = useRef([]);
@@ -92,24 +88,16 @@ const handleClick = () => {
   function handlesubmit(e){
     e.preventDefault()
     console.log("Pressed")
-    if(query.trim()!=""){
-
-      setquestion((prev)=>[...prev,query]);
+    if(query.trim()!==""){
+      addMessage({user:true,text:query})
       setquery("")
     }
   }
   return (
     <>
     <form onSubmit={handlesubmit}>
-
-    <div>
-      {question.map((q,index)=>(
-        <UserChat key={index} message={q} duration={setdelay} />
-      ))}
-    </div>
-
     <div className="flex p-3 items-center justify-between">
-      <textarea type="text" placeholder="Ask me anything about Amrita Vishwa Vidyapeetham!"  rows="2" value={query} className="w-full mr-4 py-4 px-6 rounded-lg outline-none text-sm md:text-lg resize-none" onChange={Inputchange} disabled={delay} />
+      <textarea type="text" placeholder="Ask me anything about Amrita Vishwa Vidyapeetham!"  rows="2" value={query} className="w-full mr-4 py-4 px-6 rounded-lg outline-none text-sm md:text-lg resize-none" onChange={Inputchange} disabled={isLoading} />
       <div
         className={`transition-all duration-100 ease-in-out p-4 cursor-pointer hover:opacity-80 ${query.trim() ? "bg-white rounded-lg" : "bg-[#A4123F] rounded-full"}`}
       >
